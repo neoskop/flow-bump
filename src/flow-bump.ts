@@ -9,6 +9,7 @@ import { empty } from 'rxjs/observable/empty';
 import { concat } from 'rxjs/observable/concat';
 import { git } from './lib/cmd';
 import { handleConflictError, mainVersion, readPkgIntoContext } from './lib/utils';
+import { fromPromise } from 'rxjs/observable/fromPromise';
 
 
 
@@ -172,32 +173,18 @@ export async function flowBump(version : string, options : IOptions & {
     
     tasks.add({
         title: 'bump version',
-        task: (ctx : any) => new Listr([
-            {
-                title: 'update package.json',
-                task: async (ctx : any, task: any) => {
-                    ctx.pkg.version = ctx.version.format();
-                    task.title += ` to ${ctx.pkg.version}`;
-                    await fs.writeFile(PKG_FILE, JSON.stringify(ctx.pkg, null, 2));
-                }
-            },
-            {
-                title: 'add package.json',
-                task: () => git('add', 'package.json')
-            },
-            {
-                title: 'commit package.json',
-                task: () => git.commit(options.commitMessage.replace(/%VERSION%/g, ctx.version.format()))
-            },
-            ...('final' !== version || options.tagBranch ? [
-                {
-                    title: 'Tag commit',
-                    task : () => git.currentBranch().pipe(
-                        switchMap(branchName => git.tag(prefix.versiontag + ctx.version.format(), branchName))
-                    )
-                }
-            ] : [])
-        ])
+        task: (ctx : any, task: any) => {
+            ctx.pkg.version = ctx.version.format();
+            task.title += ` to ${ctx.pkg.version}`;
+            return concat(
+                fromPromise(fs.writeFile(PKG_FILE, JSON.stringify(ctx.pkg, null, 2))),
+                git('add', 'package.json'),
+                git.commit(options.commitMessage.replace(/%VERSION%/g, ctx.version.format())),
+                'final' !== version || options.tagBranch ? git.currentBranch().pipe(
+                    switchMap(branchName => git.tag(prefix.versiontag + ctx.version.format(), branchName))
+                ) : empty()
+            )
+        }
     });
     
     tasks.add({
