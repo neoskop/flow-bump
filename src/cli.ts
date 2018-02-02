@@ -2,11 +2,12 @@ import 'source-map-support/register';
 import 'colors';
 import * as yargs from 'yargs';
 import * as semver from 'semver';
-import { flowBump, IOptions, IPrefix, IBranch } from './flow-bump';
+import { flowBump } from './flow-bump';
 import * as path from 'path';
 import * as fs from 'fs-extra';
 import * as YAML from 'yamljs';
 import * as ini from 'ini';
+import { IBranch, IOptions, IPrefix } from './types';
 
 const COMMANDS = [ 'hotfix', 'patch', 'minor', 'major', 'alpha', 'beta', 'rc', 'final' ];
 

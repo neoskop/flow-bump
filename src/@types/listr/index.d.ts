@@ -5,7 +5,7 @@ declare module "listr" {
         public context : C;
         public task : Listr.ITask<C>[];
         constructor(tasks : Listr.ITaskDefinition<C>[], options?: Listr.IOptions);
-        add(task : List.ITaskDefinition<C>) : Listr.ITask<C>;
+        add(task : Listr.ITaskDefinition<C>) : Listr.ITask<C>;
         run(ctx?: C) : Promise<C>;
     }
     
@@ -23,27 +23,15 @@ declare module "listr" {
             title: string;
             task: (ctx : C, task : ITask<C>) => void | any | Promise<any> | Observable<any> | Listr<any>;
             skip?: (ctx : C) => void|string|boolean;
+            enabled?: (ctx : C) => boolean;
         }
         
-        export interface ITask<C extends Context> extends ITaskDefinition<C> {
-            skip(reason?: string) : void;
+        export interface ITask<C extends Context> {
+            title: string;
             output?: string;
+            skip(reason?: string) : void;
         }
     }
     
     export = Listr;
-}
-
-declare module "stream-to-observable" {
-    import { Observable } from 'rxjs/Observable';
-    
-    const streamToObservable : (stream : ReadableStream, options?: { await : any }) => Observable<any>;
-    
-    export = streamToObservable;
-}
-
-declare module "split" {
-    const split : () => any;
-    
-    export = split;
 }

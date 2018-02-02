@@ -10,7 +10,7 @@ export function mainVersion(v : SemVer) {
     return `${v.major}.${v.minor}.${v.patch}`;
 }
 
-export function readPkgIntoContext(file : string, ctx : { pkg : any }) : Observable<void> {
+export function readPkgIntoContext(file : string, ctx : { pkg? : any }) : Observable<void> {
     return Observable.create(async (subscriber : Subscriber<void>) => {
         try {
             ctx.pkg = JSON.parse(await fs.readFile(file, 'utf-8'));

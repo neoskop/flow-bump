@@ -1,4 +1,3 @@
-/// <reference path="./definitions.d.ts" />
 import * as Listr from 'listr';
 import * as fs from 'fs-extra';
 import * as path from 'path';
@@ -10,28 +9,7 @@ import { concat } from 'rxjs/observable/concat';
 import { git } from './lib/cmd';
 import { handleConflictError, mainVersion, readPkgIntoContext } from './lib/utils';
 import { fromPromise } from 'rxjs/observable/fromPromise';
-
-
-
-export interface IOptions {
-    commitMessage: string;
-    pull: boolean;
-    push: boolean;
-    keepBranch: boolean;
-    tagBranch: boolean;
-}
-
-export interface IPrefix {
-    release: string;
-    hotfix: string;
-    versiontag: string;
-}
-
-export interface IBranch {
-    master: string;
-    develop: string;
-}
-
+import { IOptions, IPrefix, IBranch } from './types';
 
 export async function flowBump(version : string, options : IOptions & {
     fromBranch?: string,
@@ -76,7 +54,7 @@ export async function flowBump(version : string, options : IOptions & {
     
         tasks.add({
             title: 'Read package.json',
-            task: (ctx : any) => {
+            task: ctx => {
                 const TMP_BRANCH_NAME = 'temp/' + Math.random().toString(36).substr(2, 32);
                 return git.currentBranch().pipe(
                     switchMap(branch => {
@@ -106,13 +84,13 @@ export async function flowBump(version : string, options : IOptions & {
         
         tasks.add({
             title: 'Read package.json',
-            task: (ctx : any) => readPkgIntoContext(PKG_FILE, ctx)
+            task: ctx => readPkgIntoContext(PKG_FILE, ctx)
         });
     }
     
     tasks.add({
         title: 'Resolve new version',
-        task: (ctx : any, task : any) => {
+        task: (ctx, task) => {
             let v = ctx.pkg ? semver.parse(ctx.pkg.version)! : null;
             if('major' === version || 'minor' === version || 'patch' === version) {
                 v = v!.inc(version);
@@ -132,8 +110,8 @@ export async function flowBump(version : string, options : IOptions & {
                 v = semver.parse(version)!;
                 v.prerelease = [ 'pre' ];
             }
-            ctx.version = v;
-            task.title += ` to ${v!.format()}`;
+            ctx.version = v!;
+            task.title += ` to ${ctx.version.format()}`;
         }
     });
     
@@ -141,16 +119,16 @@ export async function flowBump(version : string, options : IOptions & {
     if(version === 'patch' || version === 'minor' || version === 'major' || (semver.valid(version) && options.type === 'release')) {
         tasks.add({
             title: 'Git flow start release',
-            task: (ctx : any) => fromTag ?
-                git.createBranch( prefix.release + mainVersion(ctx.version), { fromTag: fromTag }) :
-                git.createBranch( prefix.release + mainVersion(ctx.version))
+            task: ctx => fromTag ?
+                git.createBranch( prefix.release + mainVersion(ctx.version!), { fromTag: fromTag }) :
+                git.createBranch( prefix.release + mainVersion(ctx.version!))
         });
     } else if(version === 'hotfix' || (semver.valid(version) && options.type === 'hotfix')) {
         tasks.add({
             title: 'Git flow start hotfix',
-            task: (ctx : any) => fromTag ?
-                git.createBranch( prefix.hotfix + mainVersion(ctx.version), { fromTag: fromTag }) :
-                git.createBranch( prefix.hotfix + mainVersion(ctx.version))
+            task: ctx => fromTag ?
+                git.createBranch( prefix.hotfix + mainVersion(ctx.version!), { fromTag: fromTag }) :
+                git.createBranch( prefix.hotfix + mainVersion(ctx.version!))
                 
         });
     } else {
@@ -198,7 +176,7 @@ export async function flowBump(version : string, options : IOptions & {
     if(version === 'final') {
         tasks.add({
             title: 'Git finish',
-            task: (ctx : any, task : any) => git.currentBranch().pipe(
+            task: (ctx, task) => git.currentBranch().pipe(
                 switchMap((branchName : string) => {
                     const isHotfix = branchName.indexOf(prefix.hotfix) === 0;
                     const isRelease = branchName.indexOf(prefix.release) === 0;
@@ -210,7 +188,7 @@ export async function flowBump(version : string, options : IOptions & {
                     return concat(
                         git.checkout(branch.master),
                         git.merge(branchName, [ '--no-edit' ]).pipe(handleConflictError(task)),
-                        options.tagBranch ? empty() : git.tag( prefix.versiontag + ctx.version.format(), branch.master),
+                        options.tagBranch ? empty() : git.tag( prefix.versiontag + ctx.version!.format(), branch.master),
                         git.checkout(branch.develop),
                         git.merge(branchName, [ '--no-edit' ]).pipe(handleConflictError(task)),
                         options.keepBranch ? empty() : git.removeBranch(branchName)

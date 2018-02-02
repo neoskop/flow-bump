@@ -56,7 +56,8 @@
     "emitDecoratorMetadata": true,            /* Enables experimental support for emitting type metadata for decorators. */
     "skipLibCheck": true,
     "typeRoots": [
-      "./node_modules/@types"
+      "./node_modules/@types",
+      "src/@types"
     ]
   },
   "files": [
