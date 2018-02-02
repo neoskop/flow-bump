@@ -1,4 +1,5 @@
 import 'source-map-support/register';
+import 'colors';
 import * as yargs from 'yargs';
 import * as semver from 'semver';
 import { flowBump, IOptions, IPrefix, IBranch } from './flow-bump';
@@ -80,8 +81,9 @@ export async function cli() {
             tagBranch: !!args.tagBranch
         }, prefix, branch);
     } catch(err) {
-        console.error(err.message);
-        console.error(err.stack);
+        console.error(`\u274C An error occured`.red);
+        console.error();
+        console.error(err.message || err);
         process.exit(1);
     }
 }
