@@ -67,29 +67,28 @@ export async function flowBump(version : string, options : IOptions & {
     
     
     if(fromTag) {
-        if(options.pull) {
-            tasks.add({
-                title: 'Git fetch',
-                task : () => git.fetch(['--all', '--tags'])
-            });
-            
-            tasks.add({
-                title: 'Read package.json',
-                task: (ctx : any) => {
-                    const TMP_BRANCH_NAME = 'temp/' + Math.random().toString(36).substr(2, 32);
-                    return git.currentBranch().pipe(
-                        switchMap(branch => {
-                            return concat(
-                                git.createBranch(TMP_BRANCH_NAME, { fromTag }),
-                                readPkgIntoContext(PKG_FILE, ctx),
-                                git.checkout(branch),
-                                git.removeBranch(TMP_BRANCH_NAME)
-                            )
-                        })
-                    );
-                }
-            })
-        }
+        tasks.add({
+            title: 'Git fetch',
+            skip: () => !options.pull,
+            task : () => git.fetch(['--all', '--tags'])
+        });
+    
+        tasks.add({
+            title: 'Read package.json',
+            task: (ctx : any) => {
+                const TMP_BRANCH_NAME = 'temp/' + Math.random().toString(36).substr(2, 32);
+                return git.currentBranch().pipe(
+                    switchMap(branch => {
+                        return concat(
+                            git.createBranch(TMP_BRANCH_NAME, { fromTag }),
+                            readPkgIntoContext(PKG_FILE, ctx),
+                            git.checkout(branch),
+                            git.removeBranch(TMP_BRANCH_NAME)
+                        )
+                    })
+                );
+            }
+        })
     } else {
         if(fromBranch) {
             tasks.add({
@@ -97,12 +96,12 @@ export async function flowBump(version : string, options : IOptions & {
                 task: () => git.checkout(fromBranch!)
             });
         }
-        if(options.pull) {
-            tasks.add({
-                title: `Git pull`,
-                task: () => git.pull()
-            })
-        }
+        
+        tasks.add({
+            title: `Git pull`,
+            skip: () => !options.pull,
+            task: () => git.pull()
+        });
         
         tasks.add({
             title: 'Read package.json',
@@ -201,14 +200,13 @@ export async function flowBump(version : string, options : IOptions & {
         ])
     });
     
-    if(options.push) {
-        tasks.add({
-            title: 'Push branch',
-            task: () => git.currentBranch().pipe(
-                switchMap(branch => git.push('origin', branch))
-            )
-        });
-    }
+    tasks.add({
+        title: 'Push branch',
+        skip: () => !options.push,
+        task: () => git.currentBranch().pipe(
+            switchMap(branch => git.push('origin', branch))
+        )
+    });
     
     if(version === 'final') {
         tasks.add({
@@ -234,23 +232,23 @@ export async function flowBump(version : string, options : IOptions & {
             )
         });
         
-        if(options.push) {
-            tasks.add({
-                title: 'Push develop branch',
-                task: () => concat(
-                    git.checkout(branch.develop),
-                    git.push('origin', branch.develop)
-                )
-            });
-    
-            tasks.add({
-                title: `Push master branch`,
-                task: () => concat(
-                    git.checkout(branch.master),
-                    git.push('origin', branch.master)
-                )
-            });
-        }
+        tasks.add({
+            title: 'Push develop branch',
+            skip: () => !options.push,
+            task: () => concat(
+                git.checkout(branch.develop),
+                git.push('origin', branch.develop)
+            )
+        });
+
+        tasks.add({
+            title: `Push master branch`,
+            skip: () => !options.push,
+            task: () => concat(
+                git.checkout(branch.master),
+                git.push('origin', branch.master)
+            )
+        });
     }
     
     return await tasks.run();

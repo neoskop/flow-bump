@@ -80,6 +80,8 @@ export async function cli() {
             type  : args.type,
             tagBranch: !!args.tagBranch
         }, prefix, branch);
+        
+        process.exit(0);
     } catch(err) {
         console.error(`\u274C An error occured`.red);
         console.error();
