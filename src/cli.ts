@@ -8,6 +8,7 @@ import * as fs from 'fs-extra';
 import * as YAML from 'yamljs';
 import * as ini from 'ini';
 import { IBranch, IOptions, IPrefix } from './types';
+import { DEFAULT_BRANCH, DEFAULT_OPTIONS, DEFAULT_PREFIX } from './lib/defaults';
 
 const COMMANDS = [ 'hotfix', 'patch', 'minor', 'major', 'alpha', 'beta', 'rc', 'final' ];
 
@@ -92,18 +93,25 @@ export async function cli() {
 }
 
 async function loadYamlConfig() : Promise<{ options?: Partial<IOptions>, prefix?: Partial<IPrefix>, branch?: Partial<IBranch> }> {
-    const CONFIG_FILES = [
-        path.join(process.cwd(), 'flow-bump.yml'),
-        path.join(process.cwd(), 'flow-bump.yaml'),
-        path.join(process.cwd(), '.flow-bump.yml'),
-        path.join(process.cwd(), '.flow-bump.yaml')
-    ];
+    const FILE_NAMES = [ 'flow-bump.yml', 'flow-bump.yaml', '.flow-bump.yml', '.flow-bump.yaml' ];
+    const DIRECTORIES : string[] = [];
     
-    for(const file of CONFIG_FILES) {
-        if(await fs.pathExists(file)) {
-            const config = YAML.load(file);
-            if(null == config) {
-                throw new SyntaxError(`Error in yaml file "${file}"`);
+    let dir = process.cwd();
+    
+    do {
+        DIRECTORIES.push(dir);
+    } while((dir = path.dirname(dir)) !== '/');
+    
+    DIRECTORIES.push('~');
+    
+    for(const dir of DIRECTORIES) {
+        for(const name of FILE_NAMES) {
+            const file = path.join(dir, name);
+            if(await fs.pathExists(file)) {
+                const config = YAML.load(file);
+                if(null == config) {
+                    throw new SyntaxError(`Error in yaml file "${file}"`);
+                }
             }
         }
     }
@@ -126,29 +134,11 @@ async function loadGitConfig() : Promise<{ prefix?: IPrefix, branch?: IBranch }>
 }
 
 async function load(args : any) : Promise<{ options: IOptions, prefix: IPrefix, branch: IBranch }> {
-    const DEFAULT_OPTIONS : IOptions = {
-        pull: true,
-        push: true,
-        commitMessage: 'Bump to version %VERSION%',
-        keepBranch: false,
-        tagBranch: false
-    };
-    
-    const DEFAULT_BRANCH : IBranch = {
-        develop: 'develop',
-        master: 'master'
-    };
-    
-    const DEFAULT_PREFIX : IPrefix = {
-        release: 'release/',
-        hotfix: 'hotfix/',
-        versiontag: ''
-    };
-    
     const ARG_OPTIONS = {
         ...(null != args.commitMsg ? { commitMessage: args.commitMsg } : {}),
         ...(null != args.pull ? { pull: args.pull } : {}),
-        ...(null != args.push ? { push: args.push } : {})
+        ...(null != args.push ? { push: args.push } : {}),
+        ...(null != args.tagBranch ? { tagBranch: args.tagBranch } : {})
     };
     
     const GIT_CONFIG = await loadGitConfig();
