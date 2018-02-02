@@ -24,12 +24,6 @@ $ npm install -g @neoskop/flow-bump     // or via npm
 ```sh
 ```
 
-## ToDos
- - Search for config file in parent directories and home
- - Add scripts/plugins for steps
- - Configure via CLI (global/local)
-
-
 ## License
 
 MIT License
