@@ -34,8 +34,8 @@ export interface IBranch {
 
 
 export async function flowBump(version : string, options : IOptions & {
-    branch?: string,
-    tag?: string,
+    fromBranch?: string,
+    fromTag?: string,
     type?: 'release' | 'hotfix'
 }, prefix: IPrefix, branch : IBranch) {
     options = {
@@ -54,16 +54,16 @@ export async function flowBump(version : string, options : IOptions & {
     
     let fromBranch : string|undefined;
     let fromTag : string|undefined;
-    if(options.branch) {
-        fromBranch = options.branch;
-    } else if(!options.tag) {
+    if(options.fromBranch) {
+        fromBranch = options.fromBranch;
+    } else if(!options.fromTag) {
         if(version === 'hotfix') {
             fromBranch = branch.master;
         } else if(version === 'patch' || version === 'minor' || version === 'major') {
             fromBranch = branch.develop;
         }
-    } else if(options.tag) {
-        fromTag = options.tag;
+    } else if(options.fromTag) {
+        fromTag = options.fromTag;
     }
     
     
@@ -210,7 +210,7 @@ export async function flowBump(version : string, options : IOptions & {
                     return concat(
                         git.checkout(branch.master),
                         git.merge(branchName, [ '--no-edit' ]).pipe(handleConflictError(task)),
-                        options.tagBranch ? empty() : git.tag( prefix.versiontag + ctx.version.format(), branchName),
+                        options.tagBranch ? empty() : git.tag( prefix.versiontag + ctx.version.format(), branch.master),
                         git.checkout(branch.develop),
                         git.merge(branchName, [ '--no-edit' ]).pipe(handleConflictError(task)),
                         options.keepBranch ? empty() : git.removeBranch(branchName)

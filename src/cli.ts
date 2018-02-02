@@ -19,13 +19,13 @@ export async function cli() {
         describe: "Push to git after branching and bumping (via --no-push)"
     });
     
-    yargs.options('branch', {
+    yargs.options('from-branch', {
         alias: 'b',
         describe: 'Create version from which branch',
         type: 'string'
     });
     
-    yargs.options('tag', {
+    yargs.options('from-tag', {
         alias: 't',
         describe: 'Create version from which tag',
         type: 'string'
@@ -75,10 +75,10 @@ export async function cli() {
     
         await flowBump(args._[ 0 ], {
             ...options,
-            branch: args.branch,
-            tag   : args.tag,
-            type  : args.type,
-            tagBranch: !!args.tagBranch
+            fromBranch: args.branch,
+            fromTag   : args.tag,
+            type      : args.type,
+            tagBranch : !!args.tagBranch
         }, prefix, branch);
         
         process.exit(0);
