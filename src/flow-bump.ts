@@ -11,20 +11,23 @@ import { handleConflictError, mainVersion, readPkgIntoContext } from './lib/util
 import { fromPromise } from 'rxjs/observable/fromPromise';
 import { IOptions, IPrefix, IBranch, IScripts } from './types';
 
-export async function flowBump(version : string, options : IOptions & {
+export type MainCommand = 'major'|'minor'|'patch'|'fix';
+export type IncCommand = 'alpha'|'beta'|'rc';
+export type SpecCommand = 'release'|'hotfix';
+export type FinalCommand = 'final';
+export type Command = MainCommand|IncCommand|SpecCommand|FinalCommand;
+
+export async function flowBump(command : Command, options : IOptions & {
     fromBranch?: string,
     fromTag?: string,
     oneShot: boolean,
-    type?: 'release' | 'hotfix'
+    version?: string,
+    type: 'alpha' | 'beta' | 'rc' | 'pre'
 }, prefix: IPrefix, branch : IBranch, scripts? : IScripts) {
     options = {
         ...options
     };
     const PKG_FILE = path.join(process.cwd(), 'package.json');
-    
-    if(semver.valid(version) && !options.type) {
-        throw new Error('Must provide type when providing extact version');
-    }
     
     const tasks = new Listr<{
         pkg?: { version: string };
@@ -36,9 +39,9 @@ export async function flowBump(version : string, options : IOptions & {
     if(options.fromBranch) {
         fromBranch = options.fromBranch;
     } else if(!options.fromTag) {
-        if(version === 'hotfix') {
+        if(command === 'hotfix' || command === 'fix') {
             fromBranch = branch.master;
-        } else if(version === 'patch' || version === 'minor' || version === 'major') {
+        } else if(command === 'patch' || command === 'minor' || command === 'major') {
             fromBranch = branch.develop;
         }
     } else if(options.fromTag) {
@@ -97,22 +100,31 @@ export async function flowBump(version : string, options : IOptions & {
         title: 'Resolve new version',
         task: (ctx, task) => {
             let v = ctx.pkg ? semver.parse(ctx.pkg.version)! : null;
-            if('major' === version || 'minor' === version || 'patch' === version) {
-                v = v!.inc(version);
+            if('major' === command || 'minor' === command || 'patch' === command) {
+                v = v!.inc(command);
                 v.prerelease = [ 'pre' ];
+                if(options.type && options.type !== 'pre') {
+                    v = v!.inc('prerelease', options.type);
+                }
             }
-            if('hotfix' === version) {
+            if('fix' === command) {
                 v = v!.inc('patch');
                 v.prerelease = [ 'pre' ];
+                if(options.type && options.type !== 'pre') {
+                    v = v!.inc('prerelease', options.type);
+                }
             }
-            if('alpha' === version || 'beta' === version || 'rc' === version) {
-                v = v!.inc('prerelease', version);
+            if('alpha' === command || 'beta' === command || 'rc' === command) {
+                v = v!.inc('prerelease', command);
             }
-            if(semver.valid(version)) {
-                v = semver.parse(version)!;
+            if('hotfix' === command || 'release' === command) {
+                v = semver.parse(options.version!)!;
                 v.prerelease = [ 'pre' ];
+                if(options.type && options.type !== 'pre') {
+                    v = v!.inc('prerelease', options.type);
+                }
             }
-            if('final' === version || options.oneShot) {
+            if('final' === command || options.oneShot) {
                 v!.prerelease.length = 0;
             }
             ctx.version = v!;
@@ -121,14 +133,14 @@ export async function flowBump(version : string, options : IOptions & {
     });
     
     
-    if(version === 'patch' || version === 'minor' || version === 'major' || (semver.valid(version) && options.type === 'release')) {
+    if(command === 'patch' || command === 'minor' || command === 'major' || command === 'release') {
         tasks.add({
             title: 'Git flow start release',
             task: ctx => fromTag ?
                 git.createBranch( prefix.release + mainVersion(ctx.version!), { fromTag: fromTag }) :
                 git.createBranch( prefix.release + mainVersion(ctx.version!))
         });
-    } else if(version === 'hotfix' || (semver.valid(version) && options.type === 'hotfix')) {
+    } else if(command === 'hotfix' || command === 'fix') {
         tasks.add({
             title: 'Git flow start hotfix',
             task: ctx => fromTag ?
@@ -164,7 +176,7 @@ export async function flowBump(version : string, options : IOptions & {
                 fromPromise(fs.writeFile(PKG_FILE, JSON.stringify(ctx.pkg, null, 2))),
                 git('add', 'package.json'),
                 git.commit(options.commitMessage.replace(/%VERSION%/g, ctx.version!.format())),
-                (options.oneShot || 'final' === version) && !options.tagBranch ? empty() : git.currentBranch().pipe(
+                (options.oneShot || 'final' === command) && !options.tagBranch ? empty() : git.currentBranch().pipe(
                     switchMap(branchName => concat(
                         git.tag(prefix.versiontag + ctx.version!.format(), branchName),
                         invokeScript('postBump', { scripts, env: { FB_BRANCH: branchName } }, ctx)
@@ -188,7 +200,7 @@ export async function flowBump(version : string, options : IOptions & {
         )
     });
     
-    if(version === 'final' || options.oneShot) {
+    if(command === 'final' || options.oneShot) {
         tasks.add({
             title: 'Git finish',
             task: (ctx, task) => git.currentBranch().pipe(

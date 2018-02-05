@@ -1,8 +1,7 @@
 import 'source-map-support/register';
 import 'colors';
 import * as yargs from 'yargs';
-import * as semver from 'semver';
-import { flowBump } from './flow-bump';
+import { Command, flowBump } from './flow-bump';
 import * as path from 'path';
 import * as fs from 'fs-extra';
 import * as YAML from 'yamljs';
@@ -11,8 +10,6 @@ import { IBranch, IOptions, IPrefix, IScripts } from './types';
 import { DEFAULT_BRANCH, DEFAULT_OPTIONS, DEFAULT_PREFIX } from './lib/defaults';
 import * as Path from 'object-path';
 import * as os from 'os';
-
-const COMMANDS = [ 'hotfix', 'patch', 'minor', 'major', 'alpha', 'beta', 'rc', 'final' ];
 
 export async function cli() {
     yargs.option('pull', {
@@ -48,14 +45,9 @@ export async function cli() {
     });
     
     yargs.options('one-shot', {
-        alias: 'o',
+        alias   : 'o',
         describe: 'Create and finalize version in one step',
-        type: 'boolean'
-    });
-    
-    yargs.options('type', {
-        alias   : 'T',
-        describe: '"release" or "hotfix", used when providing a valid semver version'
+        type    : 'boolean'
     });
     
     yargs.options('tag-branch', {
@@ -109,11 +101,32 @@ export async function cli() {
             .demandCommand(1)
     });
     
-    yargs.command('<command>', `Create a version.\n'${COMMANDS.join("', '")}' or semver version like '1.2.3'`, argv => {
-        return argv.positional('command', {
-            type: 'string'
+    for(const version of [ 'major', 'minor', 'patch', 'fix' ]) {
+        yargs.command(`${version} [type]`, `Create a ${version} version and branch`, argv => {
+            return argv.positional('type', {
+                describe: 'Prerelease version to start with (alpha|beta|rc|pre)',
+                default : 'pre'
+            })
         })
-    });
+    }
+    
+    for(const version of [ 'alpha', 'beta', 'rc' ]) {
+        yargs.command(`${version}`, `Increase a${'alpha' === version ? 'n' : ''} ${version} version`, argv => argv)
+    }
+    
+    for(const command of [ 'release', 'hotfix' ]) {
+        yargs.command(`${command} <semver> [type]`, `Create a ${command} version and branch`, argv => {
+            return argv.positional('version', {
+                describe: 'Semver version to create',
+                type    : 'string',
+            }).positional('type', {
+                describe: 'Prerelease version to start with (alpha|beta|rc|pre)',
+                default : 'pre'
+            })
+        })
+    }
+    
+    yargs.command('final', 'Finalize a version', yargs => yargs);
     
     yargs.demandCommand(1);
     
@@ -123,19 +136,26 @@ export async function cli() {
         return;
     }
     
+    console.log(args);
+    process.exit();
+    
+    if(!/^(major|minor|patch|alpha|beta|rc|release|fix|hotfix|final)$/.test(args._[ 0 ])) {
+        yargs.showHelp();
+        process.exit();
+    }
+    
     try {
         
         const { prefix, branch, options, scripts } = await load(args);
         
-        if(args._.length !== 1
-            || (-1 === COMMANDS.indexOf(args._[ 0 ]) && !semver.valid(args._[ 0 ]))
-            || args.fromBranch && args.fromTag) {
+        if(args.fromBranch && args.fromTag) {
             yargs.showHelp();
             process.exit();
         }
         
-        await flowBump(args._[ 0 ], {
+        await flowBump(args._[ 0 ] as Command, {
             ...options,
+            version   : args.semver,
             fromBranch: args.fromBranch,
             fromTag   : args.fromTag,
             type      : args.type,
@@ -152,8 +172,7 @@ export async function cli() {
     }
 }
 
-async function loadYamlConfig({ noLocal, noGlobal, noParent } : { noLocal? : boolean, noGlobal? : boolean, noParent? : boolean } = {})
-: Promise<[ string | null, { options? : Partial<IOptions>, prefix? : Partial<IPrefix>, branch? : Partial<IBranch>, scripts?: IScripts } ]> {
+async function loadYamlConfig({ noLocal, noGlobal, noParent } : { noLocal? : boolean, noGlobal? : boolean, noParent? : boolean } = {}) : Promise<[ string | null, { options? : Partial<IOptions>, prefix? : Partial<IPrefix>, branch? : Partial<IBranch>, scripts? : IScripts } ]> {
     const FILE_NAMES = [ 'flow-bump.yml', 'flow-bump.yaml', '.flow-bump.yml', '.flow-bump.yaml' ];
     const DIRECTORIES : string[] = [];
     
@@ -185,7 +204,7 @@ async function loadYamlConfig({ noLocal, noGlobal, noParent } : { noLocal? : boo
     return [ null, {} ];
 }
 
-async function writeYamlConfig(mode : 'local' | 'global', config : { options? : Partial<IOptions>, prefix? : Partial<IPrefix>, branch? : Partial<IBranch>, scripts?: IScripts }) : Promise<string> {
+async function writeYamlConfig(mode : 'local' | 'global', config : { options? : Partial<IOptions>, prefix? : Partial<IPrefix>, branch? : Partial<IBranch>, scripts? : IScripts }) : Promise<string> {
     let [ file ] = mode === 'local' ? await loadYamlConfig({
         noGlobal: true,
         noParent: true
@@ -219,7 +238,8 @@ async function load(args : any) : Promise<{ options : IOptions, prefix : IPrefix
         ...(null != args.commitMsg ? { commitMessage: args.commitMsg } : {}),
         ...(null != args.pull ? { pull: args.pull } : {}),
         ...(null != args.push ? { push: args.push } : {}),
-        ...(null != args.tagBranch ? { tagBranch: args.tagBranch } : {})
+        ...(null != args.tagBranch ? { tagBranch: args.tagBranch } : {}),
+        ...(null != args.keepBranch ? { keepBranch: args.keepBranch } : {})
     };
     
     const GIT_CONFIG = await loadGitConfig();
