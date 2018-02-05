@@ -88,16 +88,18 @@ export module git {
         return git('checkout', branch)
     }
     
-    export function createBranch(name : string, { fromTag } : { fromTag?: string } = {}) : Observable<string> {
+    export function createBranch(name : string, { fromTag, fromCommit } : { fromTag?: string, fromCommit?: string } = {}) : Observable<string> {
         if(fromTag) {
             return git('checkout', `tags/${fromTag}`, '-b', name);
+        } else if(fromCommit) {
+            return git('checkout', fromCommit, '-b', name);
         } else {
             return git('checkout', '-b', name);
         }
     }
     
-    export function removeBranch(name : string) {
-        return git('branch', '-d', name);
+    export function removeBranch(name : string, { force } : { force?: boolean } = {}) {
+        return git('branch', force ? '-D' : '-d', name);
     }
     
     export function pull() {

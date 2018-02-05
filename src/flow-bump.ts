@@ -20,6 +20,7 @@ export type Command = MainCommand|IncCommand|SpecCommand|FinalCommand;
 export async function flowBump(command : Command, options : IOptions & {
     fromBranch?: string,
     fromTag?: string,
+    fromCommit?: string;
     oneShot: boolean,
     version?: string,
     type: 'alpha' | 'beta' | 'rc' | 'pre'
@@ -36,34 +37,54 @@ export async function flowBump(command : Command, options : IOptions & {
     
     let fromBranch : string|undefined;
     let fromTag : string|undefined;
+    let fromCommit : string|undefined;
     if(options.fromBranch) {
         fromBranch = options.fromBranch;
-    } else if(!options.fromTag) {
+    } else if(options.fromTag) {
+        fromTag = options.fromTag;
+    } else if(options.fromCommit) {
+        fromCommit = options.fromCommit;
+    } else {
         if(command === 'hotfix' || command === 'fix') {
             fromBranch = branch.master;
         } else if(command === 'patch' || command === 'minor' || command === 'major') {
             fromBranch = branch.develop;
         }
-    } else if(options.fromTag) {
-        fromTag = options.fromTag;
     }
     
     
     if(fromTag) {
         tasks.add({
             title: 'Git fetch',
-            skip: () => !options.pull,
-            task : () => git.fetch(['--all', '--tags'])
+            skip : () => !options.pull,
+            task : () => git.fetch([ '--all', '--tags' ])
         });
     
         tasks.add({
             title: 'Read package.json',
-            task: ctx => {
+            task : ctx => {
                 const TMP_BRANCH_NAME = 'temp/' + Math.random().toString(36).substr(2, 32);
                 return git.currentBranch().pipe(
                     switchMap(branch => {
                         return concat(
                             git.createBranch(TMP_BRANCH_NAME, { fromTag }),
+                            readPkgIntoContext(PKG_FILE, ctx),
+                            git.checkout(branch),
+                            git.removeBranch(TMP_BRANCH_NAME, { force: true })
+                        )
+                    })
+                );
+            }
+        })
+    } else if(fromCommit) {
+        tasks.add({
+            title: 'Read package.json',
+            task : ctx => {
+                const TMP_BRANCH_NAME = 'temp/' + Math.random().toString(36).substr(2, 32);
+                return git.currentBranch().pipe(
+                    switchMap(branch => {
+                        return concat(
+                            git.createBranch(TMP_BRANCH_NAME, { fromCommit }),
                             readPkgIntoContext(PKG_FILE, ctx),
                             git.checkout(branch),
                             git.removeBranch(TMP_BRANCH_NAME)
@@ -137,14 +158,16 @@ export async function flowBump(command : Command, options : IOptions & {
         tasks.add({
             title: 'Git flow start release',
             task: ctx => fromTag ?
-                git.createBranch( prefix.release + mainVersion(ctx.version!), { fromTag: fromTag }) :
+                git.createBranch( prefix.release + mainVersion(ctx.version!), { fromTag }) :
+                fromCommit ? git.createBranch( prefix.release + mainVersion(ctx.version!), { fromCommit }) :
                 git.createBranch( prefix.release + mainVersion(ctx.version!))
         });
     } else if(command === 'hotfix' || command === 'fix') {
         tasks.add({
             title: 'Git flow start hotfix',
             task: ctx => fromTag ?
-                git.createBranch( prefix.hotfix + mainVersion(ctx.version!), { fromTag: fromTag }) :
+                git.createBranch( prefix.hotfix + mainVersion(ctx.version!), { fromTag }) :
+                fromCommit ? git.createBranch( prefix.hotfix + mainVersion(ctx.version!), { fromCommit }) :
                 git.createBranch( prefix.hotfix + mainVersion(ctx.version!))
                 
         });

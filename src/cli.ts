@@ -32,6 +32,12 @@ export async function cli() {
         type    : 'string'
     });
     
+    yargs.options('from-commit', {
+        alias   : 'c',
+        describe: 'Create version from which commit',
+        type    : 'string'
+    });
+    
     yargs.option('commit-msg', {
         alias   : 'm',
         describe: 'Template for commit message',
@@ -136,9 +142,6 @@ export async function cli() {
         return;
     }
     
-    console.log(args);
-    process.exit();
-    
     if(!/^(major|minor|patch|alpha|beta|rc|release|fix|hotfix|final)$/.test(args._[ 0 ])) {
         yargs.showHelp();
         process.exit();
@@ -148,7 +151,7 @@ export async function cli() {
         
         const { prefix, branch, options, scripts } = await load(args);
         
-        if(args.fromBranch && args.fromTag) {
+        if((args.fromBranch && args.fromTag) || (args.fromBranch && args.fromCommit) || (args.fromTag && args.fromCommit)) {
             yargs.showHelp();
             process.exit();
         }
@@ -158,6 +161,7 @@ export async function cli() {
             version   : args.semver,
             fromBranch: args.fromBranch,
             fromTag   : args.fromTag,
+            fromCommit: args.fromCommit,
             type      : args.type,
             tagBranch : !!args.tagBranch,
             oneShot   : args.oneShot
