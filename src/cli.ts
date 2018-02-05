@@ -7,7 +7,7 @@ import * as path from 'path';
 import * as fs from 'fs-extra';
 import * as YAML from 'yamljs';
 import * as ini from 'ini';
-import { IBranch, IOptions, IPrefix } from './types';
+import { IBranch, IOptions, IPrefix, IScripts } from './types';
 import { DEFAULT_BRANCH, DEFAULT_OPTIONS, DEFAULT_PREFIX } from './lib/defaults';
 import * as Path from 'object-path';
 import * as os from 'os';
@@ -125,7 +125,7 @@ export async function cli() {
     
     try {
         
-        const { prefix, branch, options } = await load(args);
+        const { prefix, branch, options, scripts } = await load(args);
         
         if(args._.length !== 1
             || (-1 === COMMANDS.indexOf(args._[ 0 ]) && !semver.valid(args._[ 0 ]))
@@ -141,7 +141,7 @@ export async function cli() {
             type      : args.type,
             tagBranch : !!args.tagBranch,
             oneShot   : args.oneShot
-        }, prefix, branch);
+        }, prefix, branch, scripts);
         
         process.exit(0);
     } catch(err) {
@@ -152,7 +152,8 @@ export async function cli() {
     }
 }
 
-async function loadYamlConfig({ noLocal, noGlobal, noParent } : { noLocal? : boolean, noGlobal? : boolean, noParent? : boolean } = {}) : Promise<[ string | null, { options? : Partial<IOptions>, prefix? : Partial<IPrefix>, branch? : Partial<IBranch> } ]> {
+async function loadYamlConfig({ noLocal, noGlobal, noParent } : { noLocal? : boolean, noGlobal? : boolean, noParent? : boolean } = {})
+: Promise<[ string | null, { options? : Partial<IOptions>, prefix? : Partial<IPrefix>, branch? : Partial<IBranch>, scripts?: IScripts } ]> {
     const FILE_NAMES = [ 'flow-bump.yml', 'flow-bump.yaml', '.flow-bump.yml', '.flow-bump.yaml' ];
     const DIRECTORIES : string[] = [];
     
@@ -184,7 +185,7 @@ async function loadYamlConfig({ noLocal, noGlobal, noParent } : { noLocal? : boo
     return [ null, {} ];
 }
 
-async function writeYamlConfig(mode : 'local' | 'global', config : { options? : Partial<IOptions>, prefix? : Partial<IPrefix>, branch? : Partial<IBranch> }) : Promise<string> {
+async function writeYamlConfig(mode : 'local' | 'global', config : { options? : Partial<IOptions>, prefix? : Partial<IPrefix>, branch? : Partial<IBranch>, scripts?: IScripts }) : Promise<string> {
     let [ file ] = mode === 'local' ? await loadYamlConfig({
         noGlobal: true,
         noParent: true
@@ -213,7 +214,7 @@ async function loadGitConfig() : Promise<{ prefix? : IPrefix, branch? : IBranch 
     }
 }
 
-async function load(args : any) : Promise<{ options : IOptions, prefix : IPrefix, branch : IBranch }> {
+async function load(args : any) : Promise<{ options : IOptions, prefix : IPrefix, branch : IBranch, scripts? : IScripts }> {
     const ARG_OPTIONS = {
         ...(null != args.commitMsg ? { commitMessage: args.commitMsg } : {}),
         ...(null != args.pull ? { pull: args.pull } : {}),
@@ -242,5 +243,5 @@ async function load(args : any) : Promise<{ options : IOptions, prefix : IPrefix
         ...(YAML_CONFIG.branch || {})
     };
     
-    return { options, prefix, branch };
+    return { options, prefix, branch, scripts: YAML_CONFIG.scripts };
 }

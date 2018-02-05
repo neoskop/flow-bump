@@ -6,17 +6,17 @@ import { _throw } from 'rxjs/observable/throw'
 import * as semver from 'semver';
 import { empty } from 'rxjs/observable/empty';
 import { concat } from 'rxjs/observable/concat';
-import { git } from './lib/cmd';
+import { git, invokeScript } from './lib/cmd';
 import { handleConflictError, mainVersion, readPkgIntoContext } from './lib/utils';
 import { fromPromise } from 'rxjs/observable/fromPromise';
-import { IOptions, IPrefix, IBranch } from './types';
+import { IOptions, IPrefix, IBranch, IScripts } from './types';
 
 export async function flowBump(version : string, options : IOptions & {
     fromBranch?: string,
     fromTag?: string,
     oneShot: boolean,
     type?: 'release' | 'hotfix'
-}, prefix: IPrefix, branch : IBranch) {
+}, prefix: IPrefix, branch : IBranch, scripts? : IScripts) {
     options = {
         ...options
     };
@@ -80,7 +80,11 @@ export async function flowBump(version : string, options : IOptions & {
         tasks.add({
             title: `Git pull`,
             skip: () => !options.pull,
-            task: () => git.pull()
+            task: () => concat(
+                invokeScript('prePull', { scripts }),
+                git.pull(),
+                invokeScript('postPull', { scripts })
+            )
         });
         
         tasks.add({
@@ -152,15 +156,19 @@ export async function flowBump(version : string, options : IOptions & {
     
     tasks.add({
         title: 'bump version',
-        task: (ctx : any, task: any) => {
-            ctx.pkg.version = ctx.version.format();
-            task.title += ` to ${ctx.pkg.version}`;
+        task: (ctx, task) => {
+            ctx.pkg!.version = ctx.version!.format();
+            task.title += ` to ${ctx.pkg!.version}`;
             return concat(
+                invokeScript('preBump', { scripts }, ctx),
                 fromPromise(fs.writeFile(PKG_FILE, JSON.stringify(ctx.pkg, null, 2))),
                 git('add', 'package.json'),
-                git.commit(options.commitMessage.replace(/%VERSION%/g, ctx.version.format())),
+                git.commit(options.commitMessage.replace(/%VERSION%/g, ctx.version!.format())),
                 (options.oneShot || 'final' === version) && !options.tagBranch ? empty() : git.currentBranch().pipe(
-                    switchMap(branchName => git.tag(prefix.versiontag + ctx.version.format(), branchName))
+                    switchMap(branchName => concat(
+                        git.tag(prefix.versiontag + ctx.version!.format(), branchName),
+                        invokeScript('postBump', { scripts, env: { FB_BRANCH: branchName } }, ctx)
+                    ))
                 )
             )
         }
@@ -169,8 +177,14 @@ export async function flowBump(version : string, options : IOptions & {
     tasks.add({
         title: 'Push branch',
         skip: () => !options.push,
-        task: () => git.currentBranch().pipe(
-            switchMap(branch => git.push('origin', branch))
+        task: ctx => concat(
+            git.currentBranch().pipe(
+                switchMap(branch => concat(
+                    invokeScript('prePush', { scripts, env: { FB_BRANCH: branch } }, ctx),
+                    git.push('origin', branch),
+                    invokeScript('postPush', { scripts, env: { FB_BRANCH: branch } }, ctx)
+                ))
+            )
         )
     });
     
@@ -201,18 +215,22 @@ export async function flowBump(version : string, options : IOptions & {
         tasks.add({
             title: 'Push develop branch',
             skip: () => !options.push,
-            task: () => concat(
+            task: ctx => concat(
                 git.checkout(branch.develop),
-                git.push('origin', branch.develop)
+                invokeScript('prePush', { scripts, env: { FB_BRANCH: branch.develop } }, ctx),
+                git.push('origin', branch.develop),
+                invokeScript('postPush', { scripts, env: { FB_BRANCH: branch.develop } }, ctx)
             )
         });
 
         tasks.add({
             title: `Push master branch`,
             skip: () => !options.push,
-            task: () => concat(
+            task: ctx => concat(
                 git.checkout(branch.master),
-                git.push('origin', branch.master)
+                invokeScript('prePush', { scripts, env: { FB_BRANCH: branch.master } }, ctx),
+                git.push('origin', branch.master),
+                invokeScript('postPush', { scripts, env: { FB_BRANCH: branch.master } }, ctx),
             )
         });
     }
