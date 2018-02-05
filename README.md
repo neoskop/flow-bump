@@ -2,15 +2,7 @@
 
 > Handle git flow and version bumping
 
-Master
-[![Travis master][travis-master-image]][travis-master-url]
-[![Test coverage master][coveralls-master-image]][coveralls-master-url]
 [![Known Vulnerabilities master][snyk-master-image]][snyk-master-url]
-
-Develop
-[![Travis develop][travis-develop-image]][travis-develop-url]
-[![Test coverage develop][coveralls-develop-image]][coveralls-develop-url]
-[![Known Vulnerabilities develop][snyk-develop-image]][snyk-develop-url]
 
 ## Installation
 
