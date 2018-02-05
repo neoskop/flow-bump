@@ -14,6 +14,7 @@ import { IOptions, IPrefix, IBranch } from './types';
 export async function flowBump(version : string, options : IOptions & {
     fromBranch?: string,
     fromTag?: string,
+    oneShot: boolean,
     type?: 'release' | 'hotfix'
 }, prefix: IPrefix, branch : IBranch) {
     options = {
@@ -103,12 +104,12 @@ export async function flowBump(version : string, options : IOptions & {
             if('alpha' === version || 'beta' === version || 'rc' === version) {
                 v = v!.inc('prerelease', version);
             }
-            if('final' === version) {
-                v!.prerelease.length = 0;
-            }
             if(semver.valid(version)) {
                 v = semver.parse(version)!;
                 v.prerelease = [ 'pre' ];
+            }
+            if('final' === version || options.oneShot) {
+                v!.prerelease.length = 0;
             }
             ctx.version = v!;
             task.title += ` to ${ctx.version.format()}`;
@@ -158,9 +159,9 @@ export async function flowBump(version : string, options : IOptions & {
                 fromPromise(fs.writeFile(PKG_FILE, JSON.stringify(ctx.pkg, null, 2))),
                 git('add', 'package.json'),
                 git.commit(options.commitMessage.replace(/%VERSION%/g, ctx.version.format())),
-                'final' !== version || options.tagBranch ? git.currentBranch().pipe(
+                (options.oneShot || 'final' === version) && !options.tagBranch ? empty() : git.currentBranch().pipe(
                     switchMap(branchName => git.tag(prefix.versiontag + ctx.version.format(), branchName))
-                ) : empty()
+                )
             )
         }
     });
@@ -173,7 +174,7 @@ export async function flowBump(version : string, options : IOptions & {
         )
     });
     
-    if(version === 'final') {
+    if(version === 'final' || options.oneShot) {
         tasks.add({
             title: 'Git finish',
             task: (ctx, task) => git.currentBranch().pipe(

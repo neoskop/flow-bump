@@ -47,6 +47,12 @@ export async function cli() {
         type    : 'boolean'
     });
     
+    yargs.options('one-shot', {
+        alias: 'o',
+        describe: 'Create and finalize version in one step',
+        type: 'boolean'
+    });
+    
     yargs.options('type', {
         alias   : 'T',
         describe: '"release" or "hotfix", used when providing a valid semver version'
@@ -133,7 +139,8 @@ export async function cli() {
             fromBranch: args.fromBranch,
             fromTag   : args.fromTag,
             type      : args.type,
-            tagBranch : !!args.tagBranch
+            tagBranch : !!args.tagBranch,
+            oneShot   : args.oneShot
         }, prefix, branch);
         
         process.exit(0);
@@ -215,7 +222,7 @@ async function load(args : any) : Promise<{ options : IOptions, prefix : IPrefix
     };
     
     const GIT_CONFIG = await loadGitConfig();
-    const [ _, YAML_CONFIG ] = await loadYamlConfig();
+    const [ , YAML_CONFIG ] = await loadYamlConfig();
     
     const options : IOptions = {
         ...DEFAULT_OPTIONS,
