@@ -194,7 +194,7 @@ async function writeYamlConfig(mode : 'local' | 'global', config : { options? : 
         file = mode === 'local' ? 'flow-bump.yml' : os.homedir() + '/.flow-bump.yml';
     }
     
-    await fs.writeFile(file, JSON.stringify(config));
+    await fs.writeFile(file, YAML.stringify(config));
     
     return file;
 }
