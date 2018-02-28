@@ -24,6 +24,7 @@ export interface IScripts {
     prePush?: string|string[];
     postPush?: string|string[];
     preBump?: string|string[];
+    bump?: string|string[];
     postBump?: string|string[];
 }
 

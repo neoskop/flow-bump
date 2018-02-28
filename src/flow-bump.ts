@@ -225,6 +225,7 @@ export async function flowBump(command : Command, options : IOptions & {
                 invokeScript('preBump', { scripts }, ctx),
                 fromPromise(fs.writeFile(PKG_FILE, JSON.stringify(ctx.pkg, null, 2))),
                 git('add', 'package.json'),
+                invokeScript('bump', { scripts }, ctx),
                 git.commit(options.commitMessage.replace(/%VERSION%/g, ctx.version!.format())),
                 (options.oneShot || isFinalCommand(command)) && !options.tagBranch ? empty() : git.currentBranch().pipe(
                     switchMap(branchName => concat(
