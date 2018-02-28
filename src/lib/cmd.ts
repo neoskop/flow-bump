@@ -39,7 +39,7 @@ export function runScripts(scripts : string|string[], env : { [key: string]: str
 
 export function runScript(script : string, env : { [key: string]: string }) : Observable<string> {
     return new Observable<string>(subscriber => {
-        const child = cp.exec(script, { env }, (err) => {
+        const child = cp.exec(script, { env: { ...process.env, ...env } }, (err) => {
             if(err) {
                 subscriber.error(err);
             }
