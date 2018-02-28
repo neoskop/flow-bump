@@ -1,21 +1,18 @@
 import * as Listr from 'listr';
 import * as fs from 'fs-extra';
 import * as path from 'path';
-import { switchMap } from 'rxjs/operators';
+import { map, switchMap } from 'rxjs/operators';
 import { _throw } from 'rxjs/observable/throw'
 import * as semver from 'semver';
+import { SemVer } from 'semver';
 import { empty } from 'rxjs/observable/empty';
 import { concat } from 'rxjs/observable/concat';
 import { git, invokeScript } from './lib/cmd';
 import { handleConflictError, mainVersion, readPkgIntoContext } from './lib/utils';
 import { fromPromise } from 'rxjs/observable/fromPromise';
-import { IOptions, IPrefix, IBranch, IScripts } from './types';
+import { IBranch, IOptions, IPrefix, IScripts } from './types';
+import { Command, isFinalCommand, isHotfixCommand, isIncCommand, isMainCommand, isSpecCommand } from './consts';
 
-export type MainCommand = 'major'|'minor'|'patch'|'fix';
-export type IncCommand = 'alpha'|'beta'|'rc';
-export type SpecCommand = 'release'|'hotfix';
-export type FinalCommand = 'final';
-export type Command = MainCommand|IncCommand|SpecCommand|FinalCommand;
 
 export async function flowBump(command : Command, options : IOptions & {
     fromBranch?: string,
@@ -23,7 +20,7 @@ export async function flowBump(command : Command, options : IOptions & {
     fromCommit?: string;
     oneShot: boolean,
     version?: string,
-    type: 'alpha' | 'beta' | 'rc' | 'pre'
+    type: 'alpha' | 'beta' | 'rc'
 }, prefix: IPrefix, branch : IBranch, scripts? : IScripts) {
     options = {
         ...options
@@ -47,7 +44,7 @@ export async function flowBump(command : Command, options : IOptions & {
     } else {
         if(command === 'hotfix' || command === 'fix') {
             fromBranch = branch.master;
-        } else if(command === 'patch' || command === 'minor' || command === 'major') {
+        } else if(isMainCommand(command)) {
             fromBranch = branch.develop;
         }
     }
@@ -119,38 +116,67 @@ export async function flowBump(command : Command, options : IOptions & {
     
     tasks.add({
         title: 'Resolve new version',
-        task: (ctx, task) => {
-            let v = ctx.pkg ? semver.parse(ctx.pkg.version)! : null;
-            if('major' === command || 'minor' === command || 'patch' === command) {
-                v = v!.inc(command);
-                v.prerelease = [ 'pre' ];
-                if(options.type && options.type !== 'pre') {
-                    v = v!.inc('prerelease', options.type);
+        task: (ctx, task) => git.currentBranch().pipe(map((branchName) => {
+            let v : SemVer|null|undefined;
+    
+            const isHotfix = branchName.indexOf(prefix.hotfix) === 0;
+            const isRelease = branchName.indexOf(prefix.release) === 0;
+            if(isMainCommand(command) || isHotfixCommand(command)) {
+                if(!ctx.pkg) {
+                    throw new Error('ctx.pkg required');
+                }
+                v = semver.parse(ctx.pkg.version)!.inc(isMainCommand(command) ? command : 'patch');
+                
+                if(options.type) {
+                    v.prerelease = [ options.type, '0' ];
                 }
             }
-            if('fix' === command) {
-                v = v!.inc('patch');
-                v.prerelease = [ 'pre' ];
-                if(options.type && options.type !== 'pre') {
-                    v = v!.inc('prerelease', options.type);
+            
+            if(isIncCommand(command) || isFinalCommand(command)) {
+                if(!isHotfix && !isRelease) {
+                    throw new Error('Wrong current branch');
+                }
+    
+                if(!ctx.pkg) {
+                    throw new Error('ctx.pkg required');
+                }
+                v = semver.parse(ctx.pkg.version)!;
+                
+                const branchVersion = isHotfix
+                    ? branchName.substr(prefix.hotfix.length)
+                    : branchName.substr(prefix.release.length);
+    
+                if(mainVersion(v) !== branchVersion) {
+                    v = semver.parse(branchVersion)!;
+                    v.prerelease = [ 'pre' ];
                 }
             }
-            if('alpha' === command || 'beta' === command || 'rc' === command) {
+            
+            if(isIncCommand(command)) {
                 v = v!.inc('prerelease', command);
             }
-            if('hotfix' === command || 'release' === command) {
-                v = semver.parse(options.version!)!;
-                v.prerelease = [ 'pre' ];
-                if(options.type && options.type !== 'pre') {
-                    v = v!.inc('prerelease', options.type);
+            
+            if(isSpecCommand(command)) {
+                v = semver.parse(options.version!);
+                if(!v) {
+                    throw new Error(`Invalid semver version "${options.version}"`);
+                }
+                
+                if(options.type) {
+                    v.prerelease = [ options.type, '0' ];
                 }
             }
-            if('final' === command || options.oneShot) {
+            
+            if(isFinalCommand(command) || options.oneShot) {
                 v!.prerelease.length = 0;
             }
-            ctx.version = v!;
+            
+            if(!v) {
+                throw new Error('Cannot resolve new version');
+            }
+            ctx.version = v;
             task.title += ` to ${ctx.version.format()}`;
-        }
+        }))
     });
     
     
@@ -191,6 +217,7 @@ export async function flowBump(command : Command, options : IOptions & {
     
     tasks.add({
         title: 'bump version',
+        skip: ctx => 0 === ctx.version!.prerelease.length && !isFinalCommand(command) && !options.oneShot,
         task: (ctx, task) => {
             ctx.pkg!.version = ctx.version!.format();
             task.title += ` to ${ctx.pkg!.version}`;
@@ -199,7 +226,7 @@ export async function flowBump(command : Command, options : IOptions & {
                 fromPromise(fs.writeFile(PKG_FILE, JSON.stringify(ctx.pkg, null, 2))),
                 git('add', 'package.json'),
                 git.commit(options.commitMessage.replace(/%VERSION%/g, ctx.version!.format())),
-                (options.oneShot || 'final' === command) && !options.tagBranch ? empty() : git.currentBranch().pipe(
+                (options.oneShot || isFinalCommand(command)) && !options.tagBranch ? empty() : git.currentBranch().pipe(
                     switchMap(branchName => concat(
                         git.tag(prefix.versiontag + ctx.version!.format(), branchName),
                         invokeScript('postBump', { scripts, env: { FB_BRANCH: branchName } }, ctx)
@@ -223,7 +250,7 @@ export async function flowBump(command : Command, options : IOptions & {
         )
     });
     
-    if(command === 'final' || options.oneShot) {
+    if(isFinalCommand(command) || options.oneShot) {
         tasks.add({
             title: 'Git finish',
             task: (ctx, task) => git.currentBranch().pipe(

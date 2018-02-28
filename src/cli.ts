@@ -1,7 +1,7 @@
 import 'source-map-support/register';
 import 'colors';
 import * as yargs from 'yargs';
-import { Command, flowBump } from './flow-bump';
+import { flowBump } from './flow-bump';
 import * as path from 'path';
 import * as fs from 'fs-extra';
 import * as YAML from 'yamljs';
@@ -10,6 +10,7 @@ import { IBranch, IOptions, IPrefix, IScripts } from './types';
 import { DEFAULT_BRANCH, DEFAULT_OPTIONS, DEFAULT_PREFIX } from './lib/defaults';
 import * as Path from 'object-path';
 import * as os from 'os';
+import { Command } from './consts';
 
 export async function cli() {
     yargs.option('pull', {
@@ -110,8 +111,7 @@ export async function cli() {
     for(const version of [ 'major', 'minor', 'patch', 'fix' ]) {
         yargs.command(`${version} [type]`, `Create a ${version} version and branch`, argv => {
             return argv.positional('type', {
-                describe: 'Prerelease version to start with (alpha|beta|rc|pre)',
-                default : 'pre'
+                describe: 'Prerelease version to start with (alpha|beta|rc|pre)'
             })
         })
     }
@@ -126,8 +126,7 @@ export async function cli() {
                 describe: 'Semver version to create',
                 type    : 'string',
             }).positional('type', {
-                describe: 'Prerelease version to start with (alpha|beta|rc|pre)',
-                default : 'pre'
+                describe: 'Prerelease version to start with (alpha|beta|rc)'
             })
         })
     }
