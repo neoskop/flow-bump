@@ -265,10 +265,10 @@ export async function flowBump(command : Command, options : IOptions & {
                     
                     return concat(
                         git.checkout(branch.master),
-                        git.merge(branchName, [ '--no-edit' ]).pipe(handleConflictError(task)),
+                        git.merge(branchName, [ '--no-edit', '--no-ff' ]).pipe(handleConflictError(task)),
                         options.tagBranch ? empty() : git.tag( prefix.versiontag + ctx.version!.format(), branch.master),
                         git.checkout(branch.develop),
-                        git.merge(branchName, [ '--no-edit' ]).pipe(handleConflictError(task)),
+                        git.merge(branchName, [ '--no-edit', '--no-ff' ]).pipe(handleConflictError(task)),
                         options.keepBranch ? empty() : git.removeBranch(branchName)
                     );
                 })

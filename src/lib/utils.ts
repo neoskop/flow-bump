@@ -44,7 +44,7 @@ export function handleConflictError(task : any) {
         if(/CONFLICT/.test(err.message)) {
             task.output = 'Resolve merge conflicts and then hit enter';
             return waitForInput().pipe(
-                switchMap(() => git.commit(null, [ '--no-edit' ]))
+                switchMap(() => git.commit(null, [ '--no-edit', '--no-ff' ]))
             )
         }
         return _throw(err);
