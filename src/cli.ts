@@ -162,7 +162,6 @@ export async function cli() {
             fromTag   : args.fromTag,
             fromCommit: args.fromCommit,
             type      : args.type,
-            tagBranch : !!args.tagBranch,
             oneShot   : args.oneShot
         }, prefix, branch, scripts);
         
