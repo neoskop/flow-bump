@@ -49,14 +49,13 @@ export async function flowBump(command : Command, options : IOptions & {
         }
     }
     
+    tasks.add({
+        title: 'Git fetch',
+        skip : () => !options.pull,
+        task : () => git.fetch([ '--all', '--tags' ])
+    });
     
     if(fromTag) {
-        tasks.add({
-            title: 'Git fetch',
-            skip : () => !options.pull,
-            task : () => git.fetch([ '--all', '--tags' ])
-        });
-    
         tasks.add({
             title: 'Read package.json',
             task : ctx => {
@@ -244,7 +243,7 @@ export async function flowBump(command : Command, options : IOptions & {
             git.currentBranch().pipe(
                 switchMap(branch => concat(
                     invokeScript('prePush', { scripts, env: { FB_BRANCH: branch } }, ctx),
-                    git.push('origin', branch),
+                    git.push('origin', branch, '--follow-tags'),
                     invokeScript('postPush', { scripts, env: { FB_BRANCH: branch } }, ctx)
                 ))
             )
@@ -281,7 +280,7 @@ export async function flowBump(command : Command, options : IOptions & {
             task: ctx => concat(
                 git.checkout(branch.develop),
                 invokeScript('prePush', { scripts, env: { FB_BRANCH: branch.develop } }, ctx),
-                git.push('origin', branch.develop),
+                git.push('origin', branch.develop, '--follow-tags'),
                 invokeScript('postPush', { scripts, env: { FB_BRANCH: branch.develop } }, ctx)
             )
         });
@@ -292,7 +291,7 @@ export async function flowBump(command : Command, options : IOptions & {
             task: ctx => concat(
                 git.checkout(branch.master),
                 invokeScript('prePush', { scripts, env: { FB_BRANCH: branch.master } }, ctx),
-                git.push('origin', branch.master),
+                git.push('origin', branch.master, '--follow-tags'),
                 invokeScript('postPush', { scripts, env: { FB_BRANCH: branch.master } }, ctx),
             )
         });

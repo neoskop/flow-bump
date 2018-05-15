@@ -106,8 +106,8 @@ export module git {
         return git('pull');
     }
     
-    export function push(remote : string, branch : string) {
-        return git('push', '-u', remote, branch);
+    export function push(remote : string, branch : string, ...options : string[]) {
+        return git('push', '-u', remote, branch, ...options);
     }
     
     export function commit(message? : string|null, flags : string[] = []) {
