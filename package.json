@@ -1,6 +1,6 @@
 {
   "name": "@neoskop/flow-bump",
-  "version": "1.0.0-rc.6",
+  "version": "1.0.0-rc.7",
   "description": "A merge of git-flow and version bumping",
   "main": "bundle/flow-bump.bundle.js",
   "module": "dist/public_api.js",
