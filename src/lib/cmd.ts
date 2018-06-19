@@ -2,7 +2,7 @@ import * as execa from 'execa';
 import { Options } from 'execa';
 import { Observable } from 'rxjs/Observable';
 import { Subscriber } from 'rxjs/Subscriber';
-import { filter, first, takeUntil, delay } from 'rxjs/operators';
+import { filter, first, takeUntil, delay, catchError } from 'rxjs/operators';
 import { fromPromise } from 'rxjs/observable/fromPromise';
 import * as streamToObservable from 'stream-to-observable';
 import * as split from 'split';
@@ -86,6 +86,10 @@ export module git {
     
     export function checkout(branch : string) : Observable<string> {
         return git('checkout', branch)
+    }
+    
+    export function checkoutOrCreate(branch : string) : Observable<string> {
+        return checkout(branch).pipe(catchError(() => createBranch(branch)));
     }
     
     export function createBranch(name : string, { fromTag, fromCommit } : { fromTag?: string, fromCommit?: string } = {}) : Observable<string> {

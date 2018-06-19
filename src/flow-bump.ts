@@ -11,7 +11,7 @@ import { git, invokeScript } from './lib/cmd';
 import { handleConflictError, mainVersion, readPkgIntoContext } from './lib/utils';
 import { fromPromise } from 'rxjs/observable/fromPromise';
 import { IBranch, IOptions, IPrefix, IScripts } from './types';
-import { Command, isFinalCommand, isHotfixCommand, isIncCommand, isMainCommand, isSpecCommand } from './consts';
+import { Command, isFinalCommand, isIncCommand, isMainCommand } from './consts';
 
 
 export async function flowBump(command : Command, options : IOptions & {
@@ -20,7 +20,8 @@ export async function flowBump(command : Command, options : IOptions & {
     fromCommit?: string;
     oneShot: boolean,
     version?: string,
-    type: 'alpha' | 'beta' | 'rc'
+    type: 'alpha' | 'beta' | 'rc',
+    toBranch: string
 }, prefix: IPrefix, branch : IBranch, scripts? : IScripts) {
     options = {
         ...options
@@ -42,7 +43,7 @@ export async function flowBump(command : Command, options : IOptions & {
     } else if(options.fromCommit) {
         fromCommit = options.fromCommit;
     } else {
-        if(command === 'hotfix' || command === 'fix') {
+        if(command === 'hotfix') {
             fromBranch = branch.master;
         } else if(isMainCommand(command)) {
             fromBranch = branch.develop;
@@ -120,11 +121,12 @@ export async function flowBump(command : Command, options : IOptions & {
     
             const isHotfix = branchName.indexOf(prefix.hotfix) === 0;
             const isRelease = branchName.indexOf(prefix.release) === 0;
-            if(isMainCommand(command) || isHotfixCommand(command)) {
+            
+            if(isMainCommand(command)) {
                 if(!ctx.pkg) {
                     throw new Error('ctx.pkg required');
                 }
-                v = semver.parse(ctx.pkg.version)!.inc(isMainCommand(command) ? command : 'patch');
+                v = semver.parse(ctx.pkg.version)!.inc(command === 'hotfix' ? 'patch' : command);
                 
                 if(options.type) {
                     v.prerelease = [ options.type, '0' ];
@@ -155,17 +157,6 @@ export async function flowBump(command : Command, options : IOptions & {
                 v = v!.inc('prerelease', command);
             }
             
-            if(isSpecCommand(command)) {
-                v = semver.parse(options.version!);
-                if(!v) {
-                    throw new Error(`Invalid semver version "${options.version}"`);
-                }
-                
-                if(options.type) {
-                    v.prerelease = [ options.type, '0' ];
-                }
-            }
-            
             if(isFinalCommand(command) || options.oneShot) {
                 v!.prerelease.length = 0;
             }
@@ -179,7 +170,7 @@ export async function flowBump(command : Command, options : IOptions & {
     });
     
     
-    if(command === 'patch' || command === 'minor' || command === 'major' || command === 'release') {
+    if(command === 'patch' || command === 'minor' || command === 'major') {
         tasks.add({
             title: 'Git flow start release',
             task: ctx => fromTag ?
@@ -187,7 +178,7 @@ export async function flowBump(command : Command, options : IOptions & {
                 fromCommit ? git.createBranch( prefix.release + mainVersion(ctx.version!), { fromCommit }) :
                 git.createBranch( prefix.release + mainVersion(ctx.version!))
         });
-    } else if(command === 'hotfix' || command === 'fix') {
+    } else if(command === 'hotfix') {
         tasks.add({
             title: 'Git flow start hotfix',
             task: ctx => fromTag ?
@@ -262,14 +253,23 @@ export async function flowBump(command : Command, options : IOptions & {
                         return _throw(new Error(`Invalid branch: "${branchName}"`));
                     }
                     
-                    return concat(
-                        git.checkout(branch.master),
-                        git.merge(branchName, [ '--no-edit', '--no-ff' ]).pipe(handleConflictError(task)),
-                        options.tagBranch ? empty() : git.tag( prefix.versiontag + ctx.version!.format(), branch.master),
-                        git.checkout(branch.develop),
-                        git.merge(branchName, [ '--no-edit', '--no-ff' ]).pipe(handleConflictError(task)),
-                        options.keepBranch ? empty() : git.removeBranch(branchName)
-                    );
+                    if(options.toBranch === 'master') {
+                        return concat(
+                            git.checkout(branch.master),
+                            git.merge(branchName, [ '--no-edit', '--no-ff' ]).pipe(handleConflictError(task)),
+                            options.tagBranch ? empty() : git.tag(prefix.versiontag + ctx.version!.format(), branch.master),
+                            git.checkout(branch.develop),
+                            git.merge(branchName, [ '--no-edit', '--no-ff' ]).pipe(handleConflictError(task)),
+                            options.keepBranch ? empty() : git.removeBranch(branchName)
+                        );
+                    } else {
+                        return concat(
+                            git.checkoutOrCreate(prefix.support + options.toBranch),
+                            git.merge(branchName, [ '--no-edit', '--no-ff' ]).pipe(handleConflictError(task)),
+                            options.tagBranch ? empty() : git.tag(prefix.versiontag + ctx.version!.format(), branch.master),
+                            options.keepBranch ? empty() : git.removeBranch(branchName)
+                        )
+                    }
                 })
             )
         });

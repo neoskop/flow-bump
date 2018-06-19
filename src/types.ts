@@ -9,6 +9,7 @@ export interface IOptions {
 export interface IPrefix {
     release: string;
     hotfix: string;
+    support: string;
     versiontag: string;
 }
 

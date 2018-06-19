@@ -108,7 +108,7 @@ export async function cli() {
             .demandCommand(1)
     });
     
-    for(const version of [ 'major', 'minor', 'patch', 'fix' ]) {
+    for(const version of [ 'major', 'minor', 'patch', 'hotfix' ]) {
         yargs.command(`${version} [type]`, `Create a ${version} version and branch`, argv => {
             return argv.positional('type', {
                 describe: 'Prerelease version to start with (alpha|beta|rc|pre)'
@@ -120,18 +120,12 @@ export async function cli() {
         yargs.command(`${version}`, `Increase a${'alpha' === version ? 'n' : ''} ${version} version`, argv => argv)
     }
     
-    for(const command of [ 'release', 'hotfix' ]) {
-        yargs.command(`${command} <semver> [type]`, `Create a ${command} version and branch`, argv => {
-            return argv.positional('version', {
-                describe: 'Semver version to create',
-                type    : 'string',
-            }).positional('type', {
-                describe: 'Prerelease version to start with (alpha|beta|rc)'
-            })
+    yargs.command('final [target]', 'Finalize a version', argv => {
+        return argv.positional('target', {
+            describe: 'Merge into given branch, "master", Major- or Minor-version',
+            default: 'master'
         })
-    }
-    
-    yargs.command('final', 'Finalize a version', yargs => yargs);
+    });
     
     yargs.demandCommand(1);
     
@@ -141,7 +135,7 @@ export async function cli() {
         return;
     }
     
-    if(!/^(major|minor|patch|alpha|beta|rc|release|fix|hotfix|final)$/.test(args._[ 0 ])) {
+    if(!/^(major|minor|patch|alpha|beta|rc|hotfix|final)$/.test(args._[ 0 ])) {
         yargs.showHelp();
         process.exit();
     }
@@ -162,7 +156,8 @@ export async function cli() {
             fromTag   : args.fromTag,
             fromCommit: args.fromCommit,
             type      : args.type,
-            oneShot   : args.oneShot
+            oneShot   : args.oneShot,
+            toBranch  : args.target
         }, prefix, branch, scripts);
         
         process.exit(0);

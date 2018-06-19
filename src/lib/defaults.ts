@@ -16,5 +16,6 @@ export const DEFAULT_BRANCH : IBranch = {
 export const DEFAULT_PREFIX : IPrefix = {
     release: 'release/',
     hotfix: 'hotfix/',
+    support: 'support/',
     versiontag: ''
 };
