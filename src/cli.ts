@@ -57,6 +57,11 @@ export async function cli() {
         type    : 'boolean'
     });
     
+    yargs.options('target', {
+        alias: 't',
+        describe: 'Merge into given branch, "master", Major- or Minor-version',
+    });
+    
     yargs.options('tag-branch', {
         describe: 'Tag branch instead of master for final'
     });

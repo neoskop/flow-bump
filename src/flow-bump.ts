@@ -253,7 +253,7 @@ export async function flowBump(command : Command, options : IOptions & {
                         return _throw(new Error(`Invalid branch: "${branchName}"`));
                     }
                     
-                    if(options.toBranch === 'master') {
+                    if(options.toBranch === 'master' || !options.toBranch) {
                         return concat(
                             git.checkout(branch.master),
                             git.merge(branchName, [ '--no-edit', '--no-ff' ]).pipe(handleConflictError(task)),
