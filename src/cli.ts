@@ -58,7 +58,7 @@ export async function cli() {
     });
     
     yargs.options('target', {
-        alias: 't',
+        alias: 'T',
         describe: 'Merge into given branch, "master", Major- or Minor-version',
     });
     
