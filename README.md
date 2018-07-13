@@ -16,19 +16,16 @@ $ npm install -g @neoskop/flow-bump     // or via npm
 ```sh
 $ fb help
 fb <command>
-
 Commands:
-  fb config                   Manipulate config files
-  fb major [type]             Create a major version and branch
-  fb minor [type]             Create a minor version and branch
-  fb patch [type]             Create a patch version and branch
-  fb fix [type]               Create a fix version and branch
-  fb alpha                    Increase an alpha version
-  fb beta                     Increase a beta version
-  fb rc                       Increase a rc version
-  fb release <semver> [type]  Create a release version and branch
-  fb hotfix <semver> [type]   Create a hotfix version and branch
-  fb final                    Finalize a version
+  cli.js config          Manipulate config files
+  cli.js major [type]    Create a major version and branch
+  cli.js minor [type]    Create a minor version and branch
+  cli.js patch [type]    Create a patch version and branch
+  cli.js hotfix [type]   Create a hotfix version and branch
+  cli.js alpha           Increase an alpha version
+  cli.js beta            Increase a beta version
+  cli.js rc              Increase a rc version
+  cli.js final [target]  Finalize a version
 
 Options:
   --help             Show help                                         [boolean]
@@ -41,7 +38,9 @@ Options:
   --commit-msg, -m   Template for commit message                        [string]
   --keep-branch, -k  Keep branch after git flow finish release         [boolean]
   --one-shot, -o     Create and finalize version in one step           [boolean]
+  --target, -T       Merge into given branch, "master", Major- or Minor-version
   --tag-branch       Tag branch instead of master for final
+
 ```
 
 ## License
