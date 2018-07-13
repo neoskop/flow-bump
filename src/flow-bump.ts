@@ -273,28 +273,41 @@ export async function flowBump(command : Command, options : IOptions & {
                 })
             )
         });
-        
-        tasks.add({
-            title: 'Push develop branch',
-            skip: () => !options.push,
-            task: ctx => concat(
-                git.checkout(branch.develop),
-                invokeScript('prePush', { scripts, env: { FB_BRANCH: branch.develop } }, ctx),
-                git.push('origin', branch.develop, '--follow-tags'),
-                invokeScript('postPush', { scripts, env: { FB_BRANCH: branch.develop } }, ctx)
-            )
-        });
-
-        tasks.add({
-            title: `Push master branch`,
-            skip: () => !options.push,
-            task: ctx => concat(
-                git.checkout(branch.master),
-                invokeScript('prePush', { scripts, env: { FB_BRANCH: branch.master } }, ctx),
-                git.push('origin', branch.master, '--follow-tags'),
-                invokeScript('postPush', { scripts, env: { FB_BRANCH: branch.master } }, ctx),
-            )
-        });
+    
+        if(options.toBranch === 'master' || !options.toBranch) {
+            tasks.add({
+                title: 'Push develop branch',
+                skip : () => !options.push,
+                task : ctx => concat(
+                    git.checkout(branch.develop),
+                    invokeScript('prePush', { scripts, env: { FB_BRANCH: branch.develop } }, ctx),
+                    git.push('origin', branch.develop, '--follow-tags'),
+                    invokeScript('postPush', { scripts, env: { FB_BRANCH: branch.develop } }, ctx)
+                )
+            });
+    
+            tasks.add({
+                title: `Push master branch`,
+                skip : () => !options.push,
+                task : ctx => concat(
+                    git.checkout(branch.master),
+                    invokeScript('prePush', { scripts, env: { FB_BRANCH: branch.master } }, ctx),
+                    git.push('origin', branch.master, '--follow-tags'),
+                    invokeScript('postPush', { scripts, env: { FB_BRANCH: branch.master } }, ctx),
+                )
+            });
+        } else {
+            tasks.add({
+                title: `Push support branch`,
+                skip : () => !options.push,
+                task : ctx => concat(
+                    git.checkout(prefix.support + options.toBranch),
+                    invokeScript('prePush', { scripts, env: { FB_BRANCH: prefix.support + options.toBranch } }, ctx),
+                    git.push('origin', prefix.support + options.toBranch),
+                    invokeScript('postPush', { scripts, env: { FB_BRANCH: prefix.support + options.toBranch } }, ctx),
+                )
+            });
+        }
     }
     
     return await tasks.run();
