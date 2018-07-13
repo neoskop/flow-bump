@@ -114,6 +114,10 @@ export module git {
         return git('push', '-u', remote, branch, ...options);
     }
     
+    export function pushTag(remote : string, tag : string) {
+        return git('push', remote, tag);
+    }
+    
     export function commit(message? : string|null, flags : string[] = []) {
         if(message) {
             return git('commit', '-m', message, ...flags);

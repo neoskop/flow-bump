@@ -12,6 +12,7 @@ import { handleConflictError, mainVersion, readPkgIntoContext } from './lib/util
 import { fromPromise } from 'rxjs/observable/fromPromise';
 import { IBranch, IOptions, IPrefix, IScripts } from './types';
 import { Command, isFinalCommand, isIncCommand, isMainCommand } from './consts';
+import { version } from 'punycode';
 
 
 export async function flowBump(command : Command, options : IOptions & {
@@ -32,6 +33,8 @@ export async function flowBump(command : Command, options : IOptions & {
         pkg?: { version: string };
         version?: semver.SemVer;
     }>([]);
+    
+    let versionTag : string|undefined;
     
     let fromBranch : string|undefined;
     let fromTag : string|undefined;
@@ -211,6 +214,7 @@ export async function flowBump(command : Command, options : IOptions & {
         task: (ctx, task) => {
             ctx.pkg!.version = ctx.version!.format();
             task.title += ` to ${ctx.pkg!.version}`;
+            versionTag = prefix.versiontag + ctx.version!.format();
             return concat(
                 invokeScript('preBump', { scripts }, ctx),
                 fromPromise(fs.writeFile(PKG_FILE, JSON.stringify(ctx.pkg, null, 2))),
@@ -219,7 +223,7 @@ export async function flowBump(command : Command, options : IOptions & {
                 git.commit(options.commitMessage.replace(/%VERSION%/g, ctx.version!.format())),
                 (options.oneShot || isFinalCommand(command)) && !options.tagBranch ? empty() : git.currentBranch().pipe(
                     switchMap(branchName => concat(
-                        git.tag(prefix.versiontag + ctx.version!.format(), branchName),
+                        git.tag(versionTag!, branchName),
                         invokeScript('postBump', { scripts, env: { FB_BRANCH: branchName } }, ctx)
                     ))
                 )
@@ -234,7 +238,7 @@ export async function flowBump(command : Command, options : IOptions & {
             git.currentBranch().pipe(
                 switchMap(branch => concat(
                     invokeScript('prePush', { scripts, env: { FB_BRANCH: branch } }, ctx),
-                    git.push('origin', branch, '--follow-tags'),
+                    git.push('origin', branch),
                     invokeScript('postPush', { scripts, env: { FB_BRANCH: branch } }, ctx)
                 ))
             )
@@ -253,11 +257,13 @@ export async function flowBump(command : Command, options : IOptions & {
                         return _throw(new Error(`Invalid branch: "${branchName}"`));
                     }
                     
+                    versionTag = prefix.versiontag + ctx.version!.format();
+                    
                     if(options.toBranch === 'master' || !options.toBranch) {
                         return concat(
                             git.checkout(branch.master),
                             git.merge(branchName, [ '--no-edit' ]).pipe(handleConflictError(task)),
-                            options.tagBranch ? empty() : git.tag(prefix.versiontag + ctx.version!.format(), branch.master),
+                            options.tagBranch ? empty() : git.tag(versionTag!, branch.master),
                             git.checkout(branch.develop),
                             git.merge(branchName, [ '--no-edit', '--no-ff' ]).pipe(handleConflictError(task)),
                             options.keepBranch ? empty() : git.removeBranch(branchName)
@@ -266,7 +272,7 @@ export async function flowBump(command : Command, options : IOptions & {
                         return concat(
                             git.checkoutOrCreate(prefix.support + options.toBranch),
                             git.merge(branchName, [ '--no-edit' ]).pipe(handleConflictError(task)),
-                            options.tagBranch ? empty() : git.tag(prefix.versiontag + ctx.version!.format(), branch.master),
+                            options.tagBranch ? empty() : git.tag(versionTag!, branch.master),
                             options.keepBranch ? empty() : git.removeBranch(branchName)
                         )
                     }
@@ -281,7 +287,7 @@ export async function flowBump(command : Command, options : IOptions & {
                 task : ctx => concat(
                     git.checkout(branch.develop),
                     invokeScript('prePush', { scripts, env: { FB_BRANCH: branch.develop } }, ctx),
-                    git.push('origin', branch.develop, '--follow-tags'),
+                    git.push('origin', branch.develop),
                     invokeScript('postPush', { scripts, env: { FB_BRANCH: branch.develop } }, ctx)
                 )
             });
@@ -292,7 +298,7 @@ export async function flowBump(command : Command, options : IOptions & {
                 task : ctx => concat(
                     git.checkout(branch.master),
                     invokeScript('prePush', { scripts, env: { FB_BRANCH: branch.master } }, ctx),
-                    git.push('origin', branch.master, '--follow-tags'),
+                    git.push('origin', branch.master),
                     invokeScript('postPush', { scripts, env: { FB_BRANCH: branch.master } }, ctx),
                 )
             });
@@ -308,6 +314,12 @@ export async function flowBump(command : Command, options : IOptions & {
                 )
             });
         }
+        
+        tasks.add({
+            title: 'Push tag',
+            skip: () => !options.push || !versionTag,
+            task: () => git.pushTag('origin', versionTag!)
+        });
     }
     
     return await tasks.run();
