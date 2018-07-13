@@ -313,13 +313,13 @@ export async function flowBump(command : Command, options : IOptions & {
                 )
             });
         }
-        
-        tasks.add({
-            title: 'Push tag',
-            skip: () => !options.push || !versionTag,
-            task: () => git.pushTag('origin', versionTag!)
-        });
     }
+    
+    tasks.add({
+        title: 'Push tag',
+        skip: () => !options.push || !versionTag,
+        task: () => git.pushTag('origin', versionTag!)
+    });
     
     return await tasks.run();
 }
