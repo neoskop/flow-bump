@@ -12,7 +12,6 @@ import { handleConflictError, mainVersion, readPkgIntoContext } from './lib/util
 import { fromPromise } from 'rxjs/observable/fromPromise';
 import { IBranch, IOptions, IPrefix, IScripts } from './types';
 import { Command, isFinalCommand, isIncCommand, isMainCommand } from './consts';
-import { version } from 'punycode';
 
 
 export async function flowBump(command : Command, options : IOptions & {
