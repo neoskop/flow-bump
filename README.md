@@ -2,15 +2,7 @@
 
 > Handle git flow and version bumping
 
-Master
-[![Travis master][travis-master-image]][travis-master-url]
-[![Test coverage master][coveralls-master-image]][coveralls-master-url]
 [![Known Vulnerabilities master][snyk-master-image]][snyk-master-url]
-
-Develop
-[![Travis develop][travis-develop-image]][travis-develop-url]
-[![Test coverage develop][coveralls-develop-image]][coveralls-develop-url]
-[![Known Vulnerabilities develop][snyk-develop-image]][snyk-develop-url]
 
 ## Installation
 
@@ -22,6 +14,33 @@ $ npm install -g @neoskop/flow-bump     // or via npm
 ## Usage
 
 ```sh
+$ fb help
+fb <command>
+Commands:
+  cli.js config          Manipulate config files
+  cli.js major [type]    Create a major version and branch
+  cli.js minor [type]    Create a minor version and branch
+  cli.js patch [type]    Create a patch version and branch
+  cli.js hotfix [type]   Create a hotfix version and branch
+  cli.js alpha           Increase an alpha version
+  cli.js beta            Increase a beta version
+  cli.js rc              Increase a rc version
+  cli.js final [target]  Finalize a version
+
+Options:
+  --help             Show help                                         [boolean]
+  --version          Show version number                               [boolean]
+  --pull             Pull from git before branching and bumping (via --no-pull)
+  --push             Push to git after branching and bumping (via --no-push)
+  --from-branch, -b  Create version from which branch                   [string]
+  --from-tag, -t     Create version from which tag                      [string]
+  --from-commit, -c  Create version from which commit                   [string]
+  --commit-msg, -m   Template for commit message                        [string]
+  --keep-branch, -k  Keep branch after git flow finish release         [boolean]
+  --one-shot, -o     Create and finalize version in one step           [boolean]
+  --target, -T       Merge into given branch, "master", Major- or Minor-version
+  --tag-branch       Tag branch instead of master for final
+
 ```
 
 ## License
@@ -53,19 +72,8 @@ SOFTWARE.
 
 [![Neoskop GmbH][neoskop-image]][neoskop-url]
 
-[travis-master-image]: https://img.shields.io/travis/neoskop/flow-bump/master.svg
-[travis-master-url]: https://travis-ci.org/neoskop/flow-bump
-[travis-develop-image]: https://img.shields.io/travis/neoskop/flow-bump/develop.svg
-[travis-develop-url]: https://travis-ci.org/neoskop/flow-bump
 [snyk-master-image]: https://snyk.io/test/github/neoskop/flow-bump/master/badge.svg
 [snyk-master-url]: https://snyk.io/test/github/neoskop/flow-bump/master
-
-[coveralls-master-image]: https://coveralls.io/repos/github/neoskop/flow-bump/badge.svg?branch=master
-[coveralls-master-url]: https://coveralls.io/github/neoskop/flow-bump?branch=master
-[coveralls-develop-image]: https://coveralls.io/repos/github/neoskop/flow-bump/badge.svg?branch=develop
-[coveralls-develop-url]: https://coveralls.io/github/neoskop/flow-bump?branch=develop
-[snyk-develop-image]: https://snyk.io/test/github/neoskop/flow-bump/develop/badge.svg
-[snyk-develop-url]: https://snyk.io/test/github/neoskop/flow-bump/develop
 
 [neoskop-image]: ./neoskop.png
 [neoskop-url]: https://www.neoskop.de/

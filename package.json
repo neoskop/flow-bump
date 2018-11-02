@@ -1,6 +1,6 @@
 {
   "name": "@neoskop/flow-bump",
-  "version": "0.0.0",
+  "version": "1.0.0",
   "description": "A merge of git-flow and version bumping",
   "main": "bundle/flow-bump.bundle.js",
   "module": "dist/public_api.js",
@@ -13,9 +13,9 @@
     "test": "npm run test:coverage && nyc report -r text-lcov | coveralls",
     "clean": "rimraf lib dist index.d.ts index.js index.js.map",
     "prebuild": "npm run test:coverage",
-    "build": "npm run clean && npm run build:tsc && npm run build:rollup",
-    "build:tsc": "tsc -p tsconfig.esm.json",
-    "build:rollup": "rollup -c rollup.js"
+    "build": "npm run clean && tsc",
+    "publish-please": "publish-please",
+    "prepublishOnly": "publish-please guard"
   },
   "bin": {
     "flow-bump": "./bin/cli.js",
@@ -50,18 +50,17 @@
     "@types/semver": "5.5.0",
     "@types/source-map-support": "0.4.0",
     "@types/yamljs": "0.2.30",
-    "@types/yargs": "10.0.1",
+    "@types/yargs": "12.0.1",
     "chai": "4.1.2",
     "coveralls": "3.0.0",
     "mocha": "4.0.1",
     "nyc": "11.2.1",
+    "publish-please": "5.1.1",
     "rimraf": "2.6.2",
-    "rollup": "0.50.0",
     "rollup-plugin-commonjs": "8.2.1",
     "rollup-plugin-node-resolve": "3.0.0",
     "rollup-plugin-sourcemaps": "0.4.2",
     "ts-node": "3.3.0",
-    "tslib": "1.8.0",
     "typescript": "2.6.2"
   },
   "nyc": {
@@ -84,7 +83,8 @@
     "source-map-support": "0.5.3",
     "split": "1.0.1",
     "stream-to-observable": "0.2.0",
+    "tslib": "1.9.0",
     "yamljs": "0.3.0",
-    "yargs": "11.0.0"
+    "yargs": "12.0.2"
   }
 }

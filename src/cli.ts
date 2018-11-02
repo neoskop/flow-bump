@@ -1,7 +1,7 @@
 import 'source-map-support/register';
 import 'colors';
 import * as yargs from 'yargs';
-import { Command, flowBump } from './flow-bump';
+import { flowBump } from './flow-bump';
 import * as path from 'path';
 import * as fs from 'fs-extra';
 import * as YAML from 'yamljs';
@@ -10,6 +10,7 @@ import { IBranch, IOptions, IPrefix, IScripts } from './types';
 import { DEFAULT_BRANCH, DEFAULT_OPTIONS, DEFAULT_PREFIX } from './lib/defaults';
 import * as Path from 'object-path';
 import * as os from 'os';
+import { Command } from './consts';
 
 export async function cli() {
     yargs.option('pull', {
@@ -54,6 +55,11 @@ export async function cli() {
         alias   : 'o',
         describe: 'Create and finalize version in one step',
         type    : 'boolean'
+    });
+    
+    yargs.options('target', {
+        alias: 'T',
+        describe: 'Merge into given branch, "master", Major- or Minor-version',
     });
     
     yargs.options('tag-branch', {
@@ -107,11 +113,10 @@ export async function cli() {
             .demandCommand(1)
     });
     
-    for(const version of [ 'major', 'minor', 'patch', 'fix' ]) {
+    for(const version of [ 'major', 'minor', 'patch', 'hotfix' ]) {
         yargs.command(`${version} [type]`, `Create a ${version} version and branch`, argv => {
             return argv.positional('type', {
-                describe: 'Prerelease version to start with (alpha|beta|rc|pre)',
-                default : 'pre'
+                describe: 'Prerelease version to start with (alpha|beta|rc|pre)'
             })
         })
     }
@@ -120,19 +125,12 @@ export async function cli() {
         yargs.command(`${version}`, `Increase a${'alpha' === version ? 'n' : ''} ${version} version`, argv => argv)
     }
     
-    for(const command of [ 'release', 'hotfix' ]) {
-        yargs.command(`${command} <semver> [type]`, `Create a ${command} version and branch`, argv => {
-            return argv.positional('version', {
-                describe: 'Semver version to create',
-                type    : 'string',
-            }).positional('type', {
-                describe: 'Prerelease version to start with (alpha|beta|rc|pre)',
-                default : 'pre'
-            })
+    yargs.command('final [target]', 'Finalize a version', argv => {
+        return argv.positional('target', {
+            describe: 'Merge into given branch, "master", Major- or Minor-version',
+            default: 'master'
         })
-    }
-    
-    yargs.command('final', 'Finalize a version', yargs => yargs);
+    });
     
     yargs.demandCommand(1);
     
@@ -142,7 +140,7 @@ export async function cli() {
         return;
     }
     
-    if(!/^(major|minor|patch|alpha|beta|rc|release|fix|hotfix|final)$/.test(args._[ 0 ])) {
+    if(!/^(major|minor|patch|alpha|beta|rc|hotfix|final)$/.test(args._[ 0 ])) {
         yargs.showHelp();
         process.exit();
     }
@@ -163,8 +161,8 @@ export async function cli() {
             fromTag   : args.fromTag,
             fromCommit: args.fromCommit,
             type      : args.type,
-            tagBranch : !!args.tagBranch,
-            oneShot   : args.oneShot
+            oneShot   : args.oneShot,
+            toBranch  : args.target
         }, prefix, branch, scripts);
         
         process.exit(0);

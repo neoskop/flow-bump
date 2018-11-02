@@ -9,6 +9,7 @@ export interface IOptions {
 export interface IPrefix {
     release: string;
     hotfix: string;
+    support: string;
     versiontag: string;
 }
 
@@ -24,6 +25,7 @@ export interface IScripts {
     prePush?: string|string[];
     postPush?: string|string[];
     preBump?: string|string[];
+    bump?: string|string[];
     postBump?: string|string[];
 }
 

@@ -2,7 +2,7 @@ import * as execa from 'execa';
 import { Options } from 'execa';
 import { Observable } from 'rxjs/Observable';
 import { Subscriber } from 'rxjs/Subscriber';
-import { filter, first, takeUntil, delay } from 'rxjs/operators';
+import { filter, first, takeUntil, delay, catchError } from 'rxjs/operators';
 import { fromPromise } from 'rxjs/observable/fromPromise';
 import * as streamToObservable from 'stream-to-observable';
 import * as split from 'split';
@@ -39,7 +39,7 @@ export function runScripts(scripts : string|string[], env : { [key: string]: str
 
 export function runScript(script : string, env : { [key: string]: string }) : Observable<string> {
     return new Observable<string>(subscriber => {
-        const child = cp.exec(script, { env }, (err) => {
+        const child = cp.exec(script, { env: { ...process.env, ...env } }, (err) => {
             if(err) {
                 subscriber.error(err);
             }
@@ -88,6 +88,10 @@ export module git {
         return git('checkout', branch)
     }
     
+    export function checkoutOrCreate(branch : string) : Observable<string> {
+        return checkout(branch).pipe(catchError(() => createBranch(branch)));
+    }
+    
     export function createBranch(name : string, { fromTag, fromCommit } : { fromTag?: string, fromCommit?: string } = {}) : Observable<string> {
         if(fromTag) {
             return git('checkout', `tags/${fromTag}`, '-b', name);
@@ -106,8 +110,12 @@ export module git {
         return git('pull');
     }
     
-    export function push(remote : string, branch : string) {
-        return git('push', '-u', remote, branch);
+    export function push(remote : string, branch : string, ...options : string[]) {
+        return git('push', '-u', remote, branch, ...options);
+    }
+    
+    export function pushTag(remote : string, tag : string) {
+        return git('push', remote, tag);
     }
     
     export function commit(message? : string|null, flags : string[] = []) {
