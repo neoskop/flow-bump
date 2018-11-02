@@ -15,7 +15,9 @@
     "prebuild": "npm run test:coverage",
     "build": "npm run clean && npm run build:tsc && npm run build:rollup",
     "build:tsc": "tsc -p tsconfig.esm.json",
-    "build:rollup": "rollup -c rollup.js"
+    "build:rollup": "rollup -c rollup.js",
+    "publish-please": "publish-please",
+    "prepublishOnly": "publish-please guard"
   },
   "bin": {
     "flow-bump": "./bin/cli.js",
@@ -55,6 +57,7 @@
     "coveralls": "3.0.0",
     "mocha": "4.0.1",
     "nyc": "11.2.1",
+    "publish-please": "5.1.1",
     "rimraf": "2.6.2",
     "rollup": "0.50.0",
     "rollup-plugin-commonjs": "8.2.1",
@@ -83,8 +86,8 @@
     "source-map-support": "0.5.3",
     "split": "1.0.1",
     "stream-to-observable": "0.2.0",
+    "tslib": "1.9.0",
     "yamljs": "0.3.0",
-    "yargs": "11.0.0",
-    "tslib": "1.9.0"
+    "yargs": "11.0.0"
   }
 }
