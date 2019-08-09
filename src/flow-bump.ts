@@ -271,7 +271,7 @@ export async function flowBump(command : Command, options : IOptions & {
                         return concat(
                             git.checkoutOrCreate(prefix.support + options.toBranch),
                             git.merge(branchName, [ '--no-edit' ]).pipe(handleConflictError(task)),
-                            options.tagBranch ? empty() : git.tag(versionTag!, branch.master),
+                            options.tagBranch ? empty() : git.tag(versionTag!, prefix.support + options.toBranch),
                             options.keepBranch ? empty() : git.removeBranch(branchName)
                         )
                     }
