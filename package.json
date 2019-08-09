@@ -1,6 +1,6 @@
 {
   "name": "@neoskop/flow-bump",
-  "version": "1.0.0",
+  "version": "1.1.0-rc.0",
   "description": "A merge of git-flow and version bumping",
   "main": "bundle/flow-bump.bundle.js",
   "module": "dist/public_api.js",
@@ -14,8 +14,9 @@
     "clean": "rimraf lib dist index.d.ts index.js index.js.map",
     "prebuild": "npm run test:coverage",
     "build": "npm run clean && tsc",
-    "publish-please": "publish-please",
-    "prepublishOnly": "publish-please guard"
+    "publish-next": "npm run build && npm publish --tag next",
+    "publish-latest-only": "npm run build && npm publish",
+    "publish-latest": "npm run publish-latest-only && npm dist-tag add @neoskop/flow-bump@`jq '.version' package.json -r` next"
   },
   "bin": {
     "flow-bump": "./bin/cli.js",
@@ -55,7 +56,6 @@
     "coveralls": "3.0.6",
     "mocha": "6.2.0",
     "nyc": "14.1.1",
-    "publish-please": "5.5.1",
     "rimraf": "2.6.3",
     "rollup-plugin-commonjs": "10.0.2",
     "rollup-plugin-node-resolve": "5.2.0",
