@@ -73,7 +73,7 @@ export async function cli() {
                 describe: 'Use global configuration file in home directory',
                 type    : 'boolean'
             })
-            .command('get [key]', 'Display value from config', a => a, async args => {
+            .command('get [key]', 'Display value from config', a => a, async (args : any) => {
                 const [ file, config ] = await loadYamlConfig({ noLocal: args.global, noGlobal: !args.global });
                 if(null == file) {
                     console.error('No config file!');
@@ -85,7 +85,7 @@ export async function cli() {
                 const value = Path.get(config, args.key);
                 console.log(YAML.stringify(value));
             })
-            .command('set <key> <value>', 'Set value in config', a => a, async args => {
+            .command('set <key> <value>', 'Set value in config', a => a, async (args : any) => {
                 const [ , config ] = await loadYamlConfig({ noLocal: args.global, noGlobal: !args.global });
                 
                 
@@ -101,7 +101,7 @@ export async function cli() {
                 const file = await writeYamlConfig(args.global ? 'global' : 'local', config);
                 console.error('write', file);
             })
-            .command('del <key>', 'Delete value from config', a => a, async args => {
+            .command('del <key>', 'Delete value from config', a => a, async (args : any) => {
                 const [ , config ] = await loadYamlConfig({ noLocal: args.global, noGlobal: !args.global });
                 
                 
@@ -134,7 +134,7 @@ export async function cli() {
     
     yargs.demandCommand(1);
     
-    const args = yargs.parse();
+    const args : any = yargs.parse();
     
     if(args._[ 0 ] === 'config') {
         return;

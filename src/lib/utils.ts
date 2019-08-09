@@ -1,10 +1,9 @@
-import { SemVer } from 'semver';
-import { Observable } from 'rxjs/Observable';
-import { Subscriber } from 'rxjs/Subscriber';
 import * as fs from 'fs-extra';
+import { Observable, Subscriber, throwError } from 'rxjs';
 import { catchError, switchMap } from 'rxjs/operators';
+import { SemVer } from 'semver';
+
 import { git } from './cmd';
-import { _throw } from 'rxjs/observable/throw';
 
 export function mainVersion(v : SemVer) {
     return `${v.major}.${v.minor}.${v.patch}`;
@@ -47,6 +46,6 @@ export function handleConflictError(task : any) {
                 switchMap(() => git.commit(null, [ '--no-edit' ]))
             )
         }
-        return _throw(err);
+        return throwError(err);
     })
 }
